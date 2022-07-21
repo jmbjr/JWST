@@ -1,0 +1,6 @@
+astropy
+dagit
+dagster
+astroquery
+numpy
+matplotlib
