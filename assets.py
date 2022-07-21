@@ -6,12 +6,12 @@ from astroquery.mast import Observations
 
 
 def get_obs(dataset, filter):
+    d_that_matches_filter = None
     for d in dataset:
-        print(d)
         print(f'filter is {d["filters"]}')
         if d['filters'] == filter:
-            return d
-    return None
+            d_that_matches_filter= d
+    return d_that_matches_filter
 
 #KEY
 #SMACS = gravitational lensing
@@ -20,9 +20,15 @@ def get_obs(dataset, filter):
 #NGC 7320 = stephan's quintet
 
 obj=["SMACS J0723.3-7327", "NGC 3324", "NGC 3132", "NGC 7320"]
-filters = ["F090W", "F200W", "F444W", "F770W", "F1130W", "F1280W", "F1800W"]
-object = obj[1]
-obs_filter = filters[1]
+NGC_3132_filters=["F090W", "F200W", "F444W", "F770W", "F1130W", "F1280W", "F1800W"]
+NGC_3324_filters = ["F200W","F187N","F090W","F444W","F335M","F444W","F770W","F1130W","F1280W","F1800W"]
+filters = [[],NGC_3324_filters, NGC_3132_filters, []]
+obj_num=1
+object = obj[obj_num]
+obs_filter = filters[obj_num][4]
+
+show_plots=False
+
 '''Test that we can talk to MAST via Astroquery below.'''
 
 obsByName = Observations.query_object(object,radius=".2 deg")
@@ -149,8 +155,36 @@ print(np.sum(data))
 # of the second array.
 np.histogram(data)
 
-plt.figure()
-plotmg2 = plt.imshow(data, cmap='gray',interpolation='nearest',
-               vmin=0, vmax=50)
-plt.show()
-plt.colorbar(plotmg2)
+if show_plots:
+
+    plotmg = plt.imshow(data, cmap='CMRmap', interpolation='nearest',
+                        vmin=0, vmax=50)
+    plt.grid(b=None)
+    plt.gca().invert_yaxis()
+    plt.axis('off')
+    plt.show()
+
+    plotmg3 = plt.imshow(data, cmap='nipy_spectral',interpolation='nearest',
+                   vmin=0, vmax=50)
+    plt.grid(b=None)
+    plt.gca().invert_yaxis()
+    plt.axis('off')
+    plt.show()
+
+    plotmg2 = plt.imshow(data, cmap='afmhot',interpolation='nearest',
+                   vmin=0, vmax=50)
+    plt.grid(b=None)
+    plt.gca().invert_yaxis()
+    plt.axis('off')
+    plt.show()
+
+else:
+    outname=f"{object}_{obs_filter}.tiff".replace(" ","_")
+    plotmg_gray = plt.imshow(data, cmap='gray', interpolation='nearest',
+                        vmin=0, vmax=50)
+    plt.grid(b=None)
+    plt.gca().invert_yaxis()
+    plt.axis('off')
+    plt.savefig(outname,bbox_inches='tight')
+
+
