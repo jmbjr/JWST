@@ -3,7 +3,7 @@ import sys
 import cv2
 from astropy.io import fits
 from astroquery.mast import Observations
-
+from astropy.time import Time
 
 def get_obs(dataset, filter):
     d_that_matches_filter = None
@@ -41,23 +41,54 @@ def make_image(data, outputname, size=(1, 1), dpi=2000, cmap='gray'):
 #NGC 3132 = ring nebula
 #NGC 7320 = stephan's quintet
 
-obj=["SMACS J0723.3-7327", "NGC 3324", "NGC 3324", "NGC 3132", "NGC 7320"]
+obj=["JWST","SMACS J0723.3-7327", "NGC 3324", "NGC 3324", "NGC 3132", "NGC 7320", "JUPITER","another random place"]
+querytype=["jwst","","","","","","criteria"]
 NGC_3132_filters=["F090W", "F200W", "F444W", "F770W", "F1130W", "F1280W", "F1800W"]
 NGC_3324_NIRCAM_filters = ["F200W","F187N","F090W","F335M","F444W"] #"F470N" is really small so it throws off the size
 NGC_3324_MIRI_filters = ["F770W","F1130W","F1280W","F1800W"]
-filters = [[],NGC_3324_NIRCAM_filters, NGC_3324_MIRI_filters, NGC_3132_filters, []]
-obj_num=1
+jupiter_filters = ['MRS', 'F277W', 'OPEN', 'F100LP', 'F770W/MRS', 'F150W', 'F356W', 'F480M', 'F322W2', 'F212N', 'F140M']
+
+another_place_filters = ['F150W2', 'F322W2', 'CLEAR']
+filters = [[None],[],NGC_3324_NIRCAM_filters, NGC_3324_MIRI_filters, NGC_3132_filters, [], jupiter_filters, another_place_filters]
+obj_num=6
 object = obj[obj_num]
-single_filter = filters[obj_num][4]
+single_filter = filters[obj_num][0]
 dpi = 1  # interpolated. need to do this automatically
 wid = None
 ht  = None
 outimgs = []
 show_plots=False
 
-'''Test that we can talk to MAST via Astroquery below.'''
+times = ['2021-07-01T00:00:00.123456789', '2023-01-01T00:00:00']
+t = Time(times, format='isot', scale='utc')
+print(str(t.mjd))
 
-obsByName = Observations.query_object(object,radius=".2 deg")
+'''Test that we can talk to MAST via Astroquery below.'''
+#for some queries, like comet Hale-Bopp, you can't query_object. we need to query_criteria.
+if querytype[obj_num] == "jwst":
+    obsByName = Observations.query_criteria(obs_collection="JWST", t_max=t.mjd , t_min=t.mjd, dataRights="PUBLIC", calib_level=3)
+    targets = {}
+    for o in obsByName:
+        if o['target_name'] not in targets:
+            targets[o['target_name']] =[]
+        if o['filters'] not in targets[o['target_name']]:
+            targets[o['target_name']].append(o['filters'])
+    for target,f in targets.items():
+        print(f"{target}:{f}")
+    sys.exit() #because we just use this to see what's going on
+elif querytype[obj_num] == "criteria":
+    targets = {}
+    obsByName = Observations.query_criteria(obs_collection="JWST", target_name=object, dataRights="PUBLIC")
+    print(f"Filters for {object}")
+    for o in obsByName:
+        if o['target_name'] not in targets:
+            targets[o['target_name']] =[]
+        if o['filters'] not in targets[o['target_name']]:
+            targets[o['target_name']].append(o['filters'])
+    for target,f in targets.items():
+        print(f"{target}:{f}")
+else:
+    obsByName = Observations.query_object(object,radius=".2 deg")
 print("Number of results from all missions:",len(obsByName))
 print(obsByName[:10])
 
@@ -129,7 +160,9 @@ for obs_filter in filter_list:
     # calib_level >= 3, both our products should be downloaded.
     manifest = Observations.download_products(i2d,mrp_only=True)
 
-
+    if manifest is None:
+        print(f"manifest is NONE for filter {obs_filter}") #TODO save list of failed filters and create asset
+        continue
     '''3. Loading and Viewing Downloaded Data
     Hooray, we successfully downloaded real JWST data! You can see the file extension is .fits, which is a common file format in astronomy. Its docs are here, and we imported a fits module from astropy earlier to deal with it.
     
@@ -230,22 +263,22 @@ for obs_filter in filter_list:
         plt.show()
 
     else:
-        outname=f"{object}_{obs_filter}.tiff".replace(" ","_")
+        outname=f"{object}_{obs_filter}.tiff".replace(" ","_").replace("/","_")
 
-        # fig = plt.imshow(data, cmap='gray', interpolation='nearest', vmin=0, vmax=50)
-        # # plt.plot(data)
-        # plt.grid(b=None)
-        # plt.gca().invert_yaxis()
-        # plt.axis('off')
-        # # dpi = 2339  # interpolated. need to do this automatically
-        #
-        # horrible_wid = float(str(fig).split(",")[1].split(';')[1].split('x')[0])
-        # horrible_dpi = dpi* wid/horrible_wid
-        # fig.axes.get_xaxis().set_visible(False)
-        # fig.axes.get_yaxis().set_visible(False)
-        # plt.savefig(outname,  bbox_inches='tight', pad_inches=0, dpi=horrible_dpi)
+        fig = plt.imshow(data, cmap='gray', interpolation='nearest')#, vmin=0, vmax=50) #TODO is vmax = 50 ok?
+        # plt.plot(data)
+        plt.grid(b=None)
+        plt.gca().invert_yaxis()
+        plt.axis('off')
+        # dpi = 2339  # interpolated. need to do this automatically
 
-        cv2.imwrite(outname, data)
+        horrible_wid = float(str(fig).split(",")[1].split(';')[1].split('x')[0])
+        horrible_dpi = dpi* wid/horrible_wid
+        fig.axes.get_xaxis().set_visible(False)
+        fig.axes.get_yaxis().set_visible(False)
+        plt.savefig(outname,  bbox_inches='tight', pad_inches=0, dpi=horrible_dpi)
+
+        #cv2.imwrite(outname, data)
 
         outimgs.append(outname)
 
