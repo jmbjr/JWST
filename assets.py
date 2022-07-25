@@ -41,16 +41,22 @@ def make_image(data, outputname, size=(1, 1), dpi=2000, cmap='gray'):
 #NGC 3132 = ring nebula
 #NGC 7320 = stephan's quintet
 
-obj=["JWST","SMACS J0723.3-7327", "NGC 3324", "NGC 3324", "NGC 3132", "NGC 7320", "JUPITER","another random place"]
-querytype=["jwst","","","","","","criteria"]
+obj=["JWST","SMACS J0723.3-7327", "NGC 3324", "NGC 3324", "NGC 3132", "NGC 7320", "JUPITER","another random place","TRAPPIST-1","NGC2264-FIELD2","HD 143532"]
+querytype=["jwst","","","","","","criteria","criteria","","criteria","criteria"]
 NGC_3132_filters=["F090W", "F200W", "F444W", "F770W", "F1130W", "F1280W", "F1800W"]
 NGC_3324_NIRCAM_filters = ["F200W","F187N","F090W","F335M","F444W"] #"F470N" is really small so it throws off the size
 NGC_3324_MIRI_filters = ["F770W","F1130W","F1280W","F1800W"]
 jupiter_filters = ['MRS', 'F277W', 'OPEN', 'F100LP', 'F770W/MRS', 'F150W', 'F356W', 'F480M', 'F322W2', 'F212N', 'F140M']
-
 another_place_filters = ['F150W2', 'F322W2', 'CLEAR']
-filters = [[None],[],NGC_3324_NIRCAM_filters, NGC_3324_MIRI_filters, NGC_3132_filters, [], jupiter_filters, another_place_filters]
-obj_num=6
+trappist_1_filters = ['CLEAR/GR700XD', 'CLEAR', 'F277W/GR700XD']
+ngc_2264_f2_filters = ['F200W', 'F210M', 'F250M', 'F430M']
+HD_143532_filters=['F090W', 'F2100W', 'F560W', 'F277W', 'F770W']
+filters = [[None],[],NGC_3324_NIRCAM_filters, NGC_3324_MIRI_filters, NGC_3132_filters, [], jupiter_filters, another_place_filters, trappist_1_filters,ngc_2264_f2_filters, HD_143532_filters]
+GET_ALL_JWST = False
+if GET_ALL_JWST:
+    obj_num = 0
+else:
+    obj_num=10
 object = obj[obj_num]
 single_filter = filters[obj_num][0]
 dpi = 1  # interpolated. need to do this automatically
@@ -66,7 +72,7 @@ print(str(t.mjd))
 '''Test that we can talk to MAST via Astroquery below.'''
 #for some queries, like comet Hale-Bopp, you can't query_object. we need to query_criteria.
 if querytype[obj_num] == "jwst":
-    obsByName = Observations.query_criteria(obs_collection="JWST", t_max=t.mjd , t_min=t.mjd, dataRights="PUBLIC", calib_level=3)
+    obsByName = Observations.query_criteria(obs_collection="JWST", t_max=t.mjd , t_min=t.mjd, dataRights="PUBLIC", calib_level=3, dataproduct_type="image")
     targets = {}
     for o in obsByName:
         if o['target_name'] not in targets:
@@ -265,7 +271,7 @@ for obs_filter in filter_list:
     else:
         outname=f"{object}_{obs_filter}.tiff".replace(" ","_").replace("/","_")
 
-        fig = plt.imshow(data, cmap='gray', interpolation='nearest')#, vmin=0, vmax=50) #TODO is vmax = 50 ok?
+        fig = plt.imshow(data, cmap='gray', interpolation='nearest', vmin=0, vmax=50) #TODO is vmax = 50 ok?
         # plt.plot(data)
         plt.grid(b=None)
         plt.gca().invert_yaxis()
